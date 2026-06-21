@@ -1,5 +1,8 @@
 # qisi-color-kit
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-qisi--color--kit-8A2BE2?style=for-the-badge)](https://sleepydog-sudo.github.io/qisi-color-kit/)
+[![Built with Vite](https://img.shields.io/badge/Built%20with-Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+
 A Procreate-friendly palette sheet generator for illustrator workflows.
 
 ## What this is
