@@ -16,6 +16,21 @@ let paletteDensity = 'large'
 let exportTheme = 'light'
 let exportColumns = 4
 let exportTextMode = 'full'
+let activeSampleTarget = null
+let labelSamples = {
+  skin: null,
+  hair: null,
+  clothing: null,
+  lineart: null
+}
+
+const LABEL_ASSIST_TARGETS = [
+  { key: 'skin', label: '皮膚' },
+  { key: 'hair', label: '頭髮' },
+  { key: 'clothing', label: '衣服' },
+  { key: 'lineart', label: '線稿' }
+]
+
 
 let swatches = []
 
@@ -35,6 +50,8 @@ function loadSavedState() {
     exportTheme = state.exportTheme === 'dark' ? 'dark' : 'light'
     exportColumns = Number(state.exportColumns) === 6 ? 6 : 4
     exportTextMode = ['full', 'hex', 'none'].includes(state.exportTextMode) ? state.exportTextMode : 'full'
+
+    labelSamples = normalizeLabelSamples(state.labelSamples)
 
     if (Array.isArray(state.swatches)) {
       swatches = state.swatches
@@ -56,6 +73,7 @@ function saveState() {
       exportTheme,
       exportColumns,
       exportTextMode,
+      labelSamples: normalizeLabelSamples(labelSamples),
       swatches
     }
 
@@ -264,6 +282,8 @@ function render() {
         </label>
 
         <button id="addPickedColor">加入色卡</button>
+
+        ${renderLabelAssist()}
       </div>
     </section>
 
@@ -404,6 +424,31 @@ function bindEvents() {
       name: pickedName || '吸取顏色',
       hex: normalizeHex(pickedColor)
     })
+    render()
+  })
+
+  document.querySelectorAll('[data-sample-target]').forEach(button => {
+    button.addEventListener('click', event => {
+      activeSampleTarget = event.currentTarget.dataset.sampleTarget
+      document.querySelectorAll('[data-sample-target]').forEach(item => {
+        item.classList.toggle('active', item.dataset.sampleTarget === activeSampleTarget)
+      })
+    })
+  })
+
+  document.querySelector('#applyLabelAssist').addEventListener('click', () => {
+    applyLabelAssist()
+  })
+
+  document.querySelector('#clearLabelSamples').addEventListener('click', () => {
+    labelSamples = {
+      skin: null,
+      hair: null,
+      clothing: null,
+      lineart: null
+    }
+    activeSampleTarget = null
+    saveState()
     render()
   })
 
@@ -561,6 +606,14 @@ function drawUploadedImage() {
 
     const pixel = ctx.getImageData(x, y, 1, 1).data
     pickedColor = rgbToHex(pixel[0], pixel[1], pixel[2])
+
+    if (activeSampleTarget) {
+      setLabelSample(activeSampleTarget, pickedColor)
+      activeSampleTarget = null
+      saveState()
+      render()
+      return
+    }
 
     const pickedHexInput = document.querySelector('#pickedHex')
     const pickedColorPreview = document.querySelector('.pickedColor')
@@ -738,6 +791,129 @@ function guessColorCategory(color) {
   if (l < 0.32 && s < 0.35) return '頭髮'
   if (s < 0.12) return '灰階'
   return '自動'
+}
+
+function renderLabelAssist() {
+  const sampleButtons = LABEL_ASSIST_TARGETS.map(target => {
+    const sample = labelSamples[target.key]
+    const colorStyle = sample ? `style="background:${sample.hex}"` : ''
+    const activeClass = activeSampleTarget === target.key ? 'active' : ''
+
+    return `
+      <button class="sampleButton ${activeClass}" data-sample-target="${target.key}" type="button">
+        <span class="sampleDot" ${colorStyle}></span>
+        設定${target.label}樣本
+      </button>
+    `
+  }).join('')
+
+  return `
+    <section class="labelAssist">
+      <h2>Label Assist</h2>
+      <p>先選樣本，再點圖片。最後按「套用標籤輔助」。</p>
+
+      <div class="sampleButtons">
+        ${sampleButtons}
+      </div>
+
+      <div class="labelAssistActions">
+        <button id="applyLabelAssist" type="button">套用標籤輔助</button>
+        <button id="clearLabelSamples" type="button">清除樣本</button>
+      </div>
+    </section>
+  `
+}
+
+function setLabelSample(targetKey, hex) {
+  const target = LABEL_ASSIST_TARGETS.find(item => item.key === targetKey)
+
+  if (!target) return
+
+  const normalizedHex = normalizeHex(hex)
+
+  labelSamples[targetKey] = {
+    key: targetKey,
+    label: target.label,
+    hex: normalizedHex,
+    rgb: hexToRgb(normalizedHex)
+  }
+}
+
+function normalizeLabelSamples(value) {
+  const normalized = {
+    skin: null,
+    hair: null,
+    clothing: null,
+    lineart: null
+  }
+
+  if (!value || typeof value !== 'object') {
+    return normalized
+  }
+
+  for (const target of LABEL_ASSIST_TARGETS) {
+    const sample = value[target.key]
+
+    if (!sample || !sample.hex) continue
+
+    const hex = normalizeHex(sample.hex)
+
+    normalized[target.key] = {
+      key: target.key,
+      label: target.label,
+      hex,
+      rgb: hexToRgb(hex)
+    }
+  }
+
+  return normalized
+}
+
+function applyLabelAssist() {
+  const samples = Object.values(labelSamples).filter(Boolean)
+
+  if (samples.length === 0) {
+    alert('先設定至少一個樣本')
+    return
+  }
+
+  if (swatches.length === 0) {
+    alert('色卡是空的')
+    return
+  }
+
+  pushHistory()
+
+  swatches = swatches.map(item => {
+    const rgb = hexToRgb(item.hex)
+    let bestSample = null
+    let bestDistance = Infinity
+
+    for (const sample of samples) {
+      const distance = colorDistance(rgb, sample.rgb)
+
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestSample = sample
+      }
+    }
+
+    if (!bestSample) return item
+
+    const threshold = bestSample.key === 'lineart' ? 72 : 96
+
+    if (bestDistance > threshold) {
+      return item
+    }
+
+    return {
+      ...item,
+      category: bestSample.label
+    }
+  })
+
+  saveState()
+  render()
 }
 
 function sortPaletteByCategory() {

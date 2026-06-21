@@ -255,3 +255,50 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+
+.labelAssist {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #342b33;
+  padding-top: 12px;
+}
+
+.labelAssist h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.labelAssist p {
+  margin: 0;
+  color: #a89aa5;
+  font-size: 12px;
+}
+
+.sampleButtons,
+.labelAssistActions {
+  display: grid;
+  gap: 8px;
+}
+
+.sampleButton {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+.sampleButton.active {
+  border-color: #c8bcc4;
+  background: #3a3038;
+}
+
+.sampleDot {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #6e5d69;
+  border-radius: 999px;
+  background: #100d10;
+  flex: 0 0 auto;
+}
