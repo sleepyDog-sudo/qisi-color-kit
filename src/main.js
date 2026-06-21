@@ -162,6 +162,9 @@ function render() {
         <button id="autoExtract">自動抽色</button>
         <button id="undoAction" ${undoStack.length === 0 ? 'disabled' : ''}>復原</button>
         <button id="redoAction" ${redoStack.length === 0 ? 'disabled' : ''}>重做</button>
+        <button id="sortByCategory">依分類排序</button>
+        <button id="sortByLightness">依明度排序</button>
+        <button id="sortByHue">依色相排序</button>
         <button id="addManualSwatch">手動新增顏色</button>
         <button id="clearPalette">清空色卡</button>
         <button id="exportPng">匯出 PNG 色卡</button>
@@ -285,6 +288,18 @@ function bindEvents() {
 
   document.querySelector('#redoAction').addEventListener('click', () => {
     redoLastAction()
+  })
+
+  document.querySelector('#sortByCategory').addEventListener('click', () => {
+    sortPaletteByCategory()
+  })
+
+  document.querySelector('#sortByLightness').addEventListener('click', () => {
+    sortPaletteByLightness()
+  })
+
+  document.querySelector('#sortByHue').addEventListener('click', () => {
+    sortPaletteByHue()
   })
 
   document.querySelector('#pickedCategory').addEventListener('input', event => {
@@ -645,6 +660,86 @@ function guessColorCategory(color) {
   if (l < 0.32 && s < 0.35) return '頭髮'
   if (s < 0.12) return '灰階'
   return '自動'
+}
+
+function sortPaletteByCategory() {
+  if (swatches.length < 2) return
+
+  pushHistory()
+
+  const categoryOrder = [
+    '皮膚',
+    '頭髮',
+    '眼睛',
+    '衣服',
+    '線稿',
+    '高光',
+    '灰階',
+    '自動',
+    '其他'
+  ]
+
+  swatches.sort((a, b) => {
+    const ai = categoryOrder.indexOf(a.category)
+    const bi = categoryOrder.indexOf(b.category)
+
+    const aRank = ai === -1 ? categoryOrder.length : ai
+    const bRank = bi === -1 ? categoryOrder.length : bi
+
+    if (aRank !== bRank) return aRank - bRank
+
+    return normalizeHex(a.hex).localeCompare(normalizeHex(b.hex))
+  })
+
+  render()
+}
+
+function sortPaletteByLightness() {
+  if (swatches.length < 2) return
+
+  pushHistory()
+
+  swatches.sort((a, b) => {
+    const ahsl = hexToHsl(a.hex)
+    const bhsl = hexToHsl(b.hex)
+
+    return bhsl.l - ahsl.l
+  })
+
+  render()
+}
+
+function sortPaletteByHue() {
+  if (swatches.length < 2) return
+
+  pushHistory()
+
+  swatches.sort((a, b) => {
+    const ahsl = hexToHsl(a.hex)
+    const bhsl = hexToHsl(b.hex)
+
+    if (Math.abs(ahsl.h - bhsl.h) > 0.03) return ahsl.h - bhsl.h
+    if (Math.abs(ahsl.l - bhsl.l) > 0.03) return bhsl.l - ahsl.l
+
+    return bhsl.s - ahsl.s
+  })
+
+  render()
+}
+
+function hexToRgb(hex) {
+  const clean = normalizeHex(hex).replace('#', '')
+
+  return {
+    r: parseInt(clean.slice(0, 2), 16),
+    g: parseInt(clean.slice(2, 4), 16),
+    b: parseInt(clean.slice(4, 6), 16)
+  }
+}
+
+function hexToHsl(hex) {
+  const rgb = hexToRgb(hex)
+  return rgbToHsl(rgb.r, rgb.g, rgb.b)
 }
 
 function exportProjectJson() {
