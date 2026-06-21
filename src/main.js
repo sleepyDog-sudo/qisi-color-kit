@@ -1,5 +1,7 @@
 import './styles.css'
 
+const STORAGE_KEY = 'qisi-color-kit-state-v1'
+
 let characterName = 'Unnamed Character'
 let uploadedImage = null
 let pickedColor = '#FFFFFF'
@@ -9,7 +11,61 @@ let autoPaletteCount = 16
 
 let swatches = []
 
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+
+    const state = JSON.parse(raw)
+
+    characterName = state.characterName || characterName
+    pickedColor = state.pickedColor || pickedColor
+    pickedCategory = state.pickedCategory || pickedCategory
+    pickedName = state.pickedName || pickedName
+    autoPaletteCount = Number(state.autoPaletteCount || autoPaletteCount)
+
+    if (Array.isArray(state.swatches)) {
+      swatches = state.swatches
+    }
+  } catch (error) {
+    console.warn('Failed to load saved qisi-color-kit state:', error)
+  }
+}
+
+function saveState() {
+  try {
+    const state = {
+      characterName,
+      pickedColor,
+      pickedCategory,
+      pickedName,
+      autoPaletteCount,
+      swatches
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch (error) {
+    console.warn('Failed to save qisi-color-kit state:', error)
+  }
+}
+
+function resetSavedState() {
+  localStorage.removeItem(STORAGE_KEY)
+
+  characterName = 'Unnamed Character'
+  uploadedImage = null
+  pickedColor = '#FFFFFF'
+  pickedCategory = '皮膚'
+  pickedName = '新吸取顏色'
+  autoPaletteCount = 16
+  swatches = []
+
+  render()
+}
+
 function render() {
+  saveState()
+
   const app = document.querySelector('#app')
 
   app.innerHTML = `
@@ -45,6 +101,7 @@ function render() {
         <button id="clearPalette">清空色卡</button>
         <button id="exportPng">匯出 PNG 色卡</button>
         <button id="copyMarkdown">複製 Markdown</button>
+        <button id="resetState">重置儲存</button>
       </div>
     </section>
 
@@ -111,6 +168,7 @@ function bindEvents() {
   document.querySelector('#characterName').addEventListener('input', event => {
     characterName = event.target.value
     document.querySelector('pre').textContent = generateMarkdown()
+    saveState()
   })
 
   document.querySelector('#imageInput').addEventListener('change', event => {
@@ -129,6 +187,7 @@ function bindEvents() {
           name: `自動抽色 ${String(index + 1).padStart(2, '0')}`,
           hex: item.hex
         }))
+        saveState()
         render()
       }
 
@@ -140,6 +199,7 @@ function bindEvents() {
 
   document.querySelector('#autoPaletteCount').addEventListener('change', event => {
     autoPaletteCount = Number(event.target.value)
+    saveState()
   })
 
   document.querySelector('#autoExtract').addEventListener('click', () => {
@@ -148,16 +208,19 @@ function bindEvents() {
 
   document.querySelector('#pickedCategory').addEventListener('input', event => {
     pickedCategory = event.target.value
+    saveState()
   })
 
   document.querySelector('#pickedName').addEventListener('input', event => {
     pickedName = event.target.value
+    saveState()
   })
 
   document.querySelector('#pickedHex').addEventListener('change', event => {
     pickedColor = normalizeHex(event.target.value)
     document.querySelector('.pickedColor').style.background = pickedColor
     event.target.value = pickedColor
+    saveState()
   })
 
   document.querySelector('#addPickedColor').addEventListener('click', () => {
@@ -252,6 +315,13 @@ function bindEvents() {
     alert('Markdown 已複製')
   })
 
+  document.querySelector('#resetState').addEventListener('click', () => {
+    const ok = window.confirm('確定要清除目前儲存的色卡嗎？')
+    if (!ok) return
+
+    resetSavedState()
+  })
+
   document.querySelector('#exportPng').addEventListener('click', () => {
     exportPalettePng()
   })
@@ -302,6 +372,7 @@ function drawUploadedImage() {
 
     pickedHexInput.value = pickedColor
     pickedColorPreview.style.background = pickedColor
+    saveState()
   })
 }
 
@@ -667,4 +738,5 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;')
 }
 
+loadSavedState()
 render()

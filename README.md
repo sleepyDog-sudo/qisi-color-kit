@@ -27,8 +27,10 @@ image reference -> auto extract colors -> manually refine labels -> export PNG s
 - Labelled color swatches
 - Drag-and-drop swatch sorting
 - One-click HEX copy
+- LocalStorage autosave
 - Drag-and-drop swatch sorting
 - One-click HEX copy
+- LocalStorage autosave
 - Editable HEX color input
 - Large color blocks for direct Procreate color picking
 - PNG palette export
