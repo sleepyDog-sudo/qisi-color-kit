@@ -13,9 +13,9 @@ body {
 }
 
 main {
-  width: min(1100px, calc(100% - 32px));
+  width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 96px 0 56px;
+  padding: 72px 0 56px;
 }
 
 .hero {
@@ -30,21 +30,23 @@ main {
 }
 
 h1 {
-  margin: 0;
-  font-size: clamp(42px, 8vw, 96px);
-  line-height: 0.95;
+  margin: 0 0 10px;
+  font-size: clamp(42px, 7vw, 86px);
+  line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .sub {
-  max-width: 620px;
+  max-width: 720px;
   color: #c8bcc4;
   font-size: 18px;
 }
 
 .panel,
-.output {
+.output,
+.sampler {
   border: 1px solid #342b33;
-  background: #1c171c;
+  background: rgba(28, 23, 28, 0.92);
   padding: 20px;
   border-radius: 18px;
   margin-bottom: 24px;
@@ -54,9 +56,11 @@ label {
   display: grid;
   gap: 8px;
   color: #c8bcc4;
+  font-size: 13px;
 }
 
-input {
+input,
+select {
   width: 100%;
   border: 1px solid #463a44;
   background: #100d10;
@@ -68,22 +72,79 @@ input {
 
 .actions {
   display: flex;
+  align-items: end;
   gap: 12px;
   margin-top: 16px;
   flex-wrap: wrap;
 }
 
-button {
+button,
+.fileButton {
   border: 1px solid #5a4c56;
   background: #2b222a;
   color: #f4f1ea;
   padding: 10px 14px;
   border-radius: 999px;
   cursor: pointer;
+  font: inherit;
+  font-size: 13px;
 }
 
-button:hover {
+button:hover,
+.fileButton:hover {
   background: #3a3038;
+}
+
+.fileButton input {
+  display: none;
+}
+
+.selectLabel {
+  min-width: 150px;
+}
+
+.sampler {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.samplerCanvasWrap {
+  display: grid;
+  gap: 10px;
+}
+
+#imageCanvas {
+  display: block;
+  max-width: 100%;
+  border: 1px solid #342b33;
+  border-radius: 16px;
+  background: #100d10;
+  cursor: crosshair;
+}
+
+.samplerHint {
+  margin: 0;
+  color: #a89aa5;
+  font-size: 13px;
+}
+
+.pickedPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.pickedPanel h2,
+.output h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.pickedColor {
+  height: 120px;
+  border: 1px solid #5a4c56;
+  border-radius: 16px;
 }
 
 .palette {
@@ -121,4 +182,11 @@ pre {
   border-radius: 12px;
   padding: 16px;
   overflow: auto;
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .sampler {
+    grid-template-columns: 1fr;
+  }
 }

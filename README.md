@@ -3,24 +3,24 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-qisi--color--kit-8A2BE2?style=for-the-badge)](https://sleepydog-sudo.github.io/qisi-color-kit/)
 [![Built with Vite](https://img.shields.io/badge/Built%20with-Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 
-A Procreate-friendly image color sampler and palette sheet generator for illustrator workflows.
+A Procreate-friendly image color sampler and automatic palette sheet generator for illustrator workflows.
 
 ## What this is
 
-qisi-color-kit helps artists upload an image, sample colors from it, label those colors, and export a clean palette sheet for Procreate color picking.
+qisi-color-kit helps artists upload an image, automatically extract main colors from it, manually sample specific pixels, label those colors, and export a clean palette sheet for Procreate color picking.
 
 Workflow:
 
-image reference -> click to sample colors -> label palette -> export PNG sheet -> Procreate color picking -> finished illustration
+image reference -> auto extract colors -> manually refine labels -> export PNG sheet -> Procreate color picking -> finished illustration
 
 ## Features
 
 - Upload an image
-- Click the image to sample pixel colors
+- Automatically extract 8 / 12 / 16 / 24 main colors
+- Click the image to sample exact pixel colors
 - Picked color preview
 - Labelled color swatches
-- Skin / hair / eye / clothing / lineart categories
-- HEX color input
+- Editable HEX color input
 - Large color blocks for direct Procreate color picking
 - PNG palette export
 - Markdown export
@@ -28,7 +28,7 @@ image reference -> click to sample colors -> label palette -> export PNG sheet -
 
 ## Status
 
-MVP with image color sampling
+MVP with image color sampling and automatic palette extraction.
 
 ## Identity
 

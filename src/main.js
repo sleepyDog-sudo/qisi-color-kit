@@ -5,18 +5,9 @@ let uploadedImage = null
 let pickedColor = '#FFFFFF'
 let pickedCategory = '皮膚'
 let pickedName = '新吸取顏色'
+let autoPaletteCount = 16
 
-let swatches = [
-  { category: '皮膚', name: '皮膚底色', hex: '#F3C7B3' },
-  { category: '皮膚', name: '皮膚陰影 1', hex: '#D99A86' },
-  { category: '皮膚', name: '腮紅', hex: '#EFA0A3' },
-  { category: '頭髮', name: '頭髮底色', hex: '#242026' },
-  { category: '頭髮', name: '頭髮亮部', hex: '#5A4B58' },
-  { category: '眼睛', name: '眼睛底色', hex: '#4B3A35' },
-  { category: '衣服', name: '衣服底色', hex: '#F4F1EA' },
-  { category: '衣服', name: '衣服陰影', hex: '#CFC7BD' },
-  { category: '線稿', name: '線稿色', hex: '#241D20' }
-]
+let swatches = []
 
 function render() {
   const app = document.querySelector('#app')
@@ -25,7 +16,7 @@ function render() {
     <section class="hero">
       <p class="eyebrow">ratshawty atelier</p>
       <h1>qisi-color-kit</h1>
-      <p class="sub">Drop an image, pick colors, build a Procreate-friendly palette sheet.</p>
+      <p class="sub">Drop an image, auto-extract colors, build a Procreate-friendly palette sheet.</p>
     </section>
 
     <section class="panel">
@@ -36,11 +27,22 @@ function render() {
 
       <div class="actions">
         <label class="fileButton">
-          上傳圖片吸色
+          上傳圖片
           <input id="imageInput" type="file" accept="image/*" />
         </label>
 
+        <label class="selectLabel">
+          自動抽色數量
+          <select id="autoPaletteCount">
+            ${[8, 12, 16, 24].map(count => `
+              <option value="${count}" ${count === autoPaletteCount ? 'selected' : ''}>${count} 色</option>
+            `).join('')}
+          </select>
+        </label>
+
+        <button id="autoExtract">自動抽色</button>
         <button id="addManualSwatch">手動新增顏色</button>
+        <button id="clearPalette">清空色卡</button>
         <button id="exportPng">匯出 PNG 色卡</button>
         <button id="copyMarkdown">複製 Markdown</button>
       </div>
@@ -49,7 +51,7 @@ function render() {
     <section class="sampler">
       <div class="samplerCanvasWrap">
         <canvas id="imageCanvas"></canvas>
-        <p class="samplerHint">${uploadedImage ? '點圖片任意位置吸色' : '先上傳一張圖片，然後點圖片吸色'}</p>
+        <p class="samplerHint">${uploadedImage ? '點圖片任意位置可以手動吸色，或按「自動抽色」直接產生色卡。' : '先上傳一張圖片。'}</p>
       </div>
 
       <div class="pickedPanel">
@@ -119,6 +121,11 @@ function bindEvents() {
 
       img.onload = () => {
         uploadedImage = img
+        swatches = extractPaletteFromImage(uploadedImage, autoPaletteCount).map((item, index) => ({
+          category: guessColorCategory(item),
+          name: `自動抽色 ${String(index + 1).padStart(2, '0')}`,
+          hex: item.hex
+        }))
         render()
       }
 
@@ -126,6 +133,14 @@ function bindEvents() {
     }
 
     reader.readAsDataURL(file)
+  })
+
+  document.querySelector('#autoPaletteCount').addEventListener('change', event => {
+    autoPaletteCount = Number(event.target.value)
+  })
+
+  document.querySelector('#autoExtract').addEventListener('click', () => {
+    autoExtractPalette()
   })
 
   document.querySelector('#pickedCategory').addEventListener('input', event => {
@@ -136,9 +151,10 @@ function bindEvents() {
     pickedName = event.target.value
   })
 
-  document.querySelector('#pickedHex').addEventListener('input', event => {
+  document.querySelector('#pickedHex').addEventListener('change', event => {
     pickedColor = normalizeHex(event.target.value)
     document.querySelector('.pickedColor').style.background = pickedColor
+    event.target.value = pickedColor
   })
 
   document.querySelector('#addPickedColor').addEventListener('click', () => {
@@ -173,6 +189,11 @@ function bindEvents() {
       name: '手動新增顏色',
       hex: '#FFFFFF'
     })
+    render()
+  })
+
+  document.querySelector('#clearPalette').addEventListener('click', () => {
+    swatches = []
     render()
   })
 
@@ -234,7 +255,179 @@ function drawUploadedImage() {
   })
 }
 
+function autoExtractPalette() {
+  if (!uploadedImage) {
+    alert('先上傳圖片')
+    return
+  }
+
+  const extracted = extractPaletteFromImage(uploadedImage, autoPaletteCount)
+
+  if (extracted.length === 0) {
+    alert('沒有抽到有效顏色')
+    return
+  }
+
+  swatches = extracted.map((item, index) => ({
+    category: guessColorCategory(item),
+    name: `自動抽色 ${String(index + 1).padStart(2, '0')}`,
+    hex: item.hex
+  }))
+
+  render()
+}
+
+function extractPaletteFromImage(img, targetCount) {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+
+  const maxSize = 180
+  const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1)
+
+  canvas.width = Math.max(1, Math.round(img.width * ratio))
+  canvas.height = Math.max(1, Math.round(img.height * ratio))
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+  const buckets = new Map()
+  const quantizeStep = 24
+  const sampleStep = 2
+
+  for (let y = 0; y < canvas.height; y += sampleStep) {
+    for (let x = 0; x < canvas.width; x += sampleStep) {
+      const i = (y * canvas.width + x) * 4
+
+      const r = imageData[i]
+      const g = imageData[i + 1]
+      const b = imageData[i + 2]
+      const a = imageData[i + 3]
+
+      if (a < 128) continue
+      if (shouldIgnorePixel(r, g, b)) continue
+
+      const qr = quantize(r, quantizeStep)
+      const qg = quantize(g, quantizeStep)
+      const qb = quantize(b, quantizeStep)
+
+      const key = `${qr},${qg},${qb}`
+
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          rTotal: 0,
+          gTotal: 0,
+          bTotal: 0,
+          count: 0
+        })
+      }
+
+      const bucket = buckets.get(key)
+      bucket.rTotal += r
+      bucket.gTotal += g
+      bucket.bTotal += b
+      bucket.count += 1
+    }
+  }
+
+  const candidates = Array.from(buckets.values())
+    .map(bucket => {
+      const r = Math.round(bucket.rTotal / bucket.count)
+      const g = Math.round(bucket.gTotal / bucket.count)
+      const b = Math.round(bucket.bTotal / bucket.count)
+      const hsl = rgbToHsl(r, g, b)
+
+      return {
+        r,
+        g,
+        b,
+        h: hsl.h,
+        s: hsl.s,
+        l: hsl.l,
+        count: bucket.count,
+        score: bucket.count * (0.65 + hsl.s * 0.35),
+        hex: rgbToHex(r, g, b)
+      }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  let selected = selectDistinctColors(candidates, targetCount, 42)
+
+  if (selected.length < targetCount) {
+    selected = selectDistinctColors(candidates, targetCount, 30)
+  }
+
+  if (selected.length < targetCount) {
+    selected = selectDistinctColors(candidates, targetCount, 18)
+  }
+
+  return selected
+    .slice(0, targetCount)
+    .sort((a, b) => {
+      if (Math.abs(a.h - b.h) > 0.03) return a.h - b.h
+      if (Math.abs(a.l - b.l) > 0.03) return a.l - b.l
+      return b.s - a.s
+    })
+}
+
+function shouldIgnorePixel(r, g, b) {
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const brightness = (r + g + b) / 3
+  const chroma = max - min
+
+  if (brightness > 248) return true
+  if (brightness < 7) return true
+
+  if (chroma < 6 && brightness > 235) return true
+  if (chroma < 6 && brightness < 20) return true
+
+  return false
+}
+
+function selectDistinctColors(candidates, targetCount, minDistance) {
+  const selected = []
+
+  for (const candidate of candidates) {
+    const tooClose = selected.some(color => {
+      return colorDistance(candidate, color) < minDistance
+    })
+
+    if (!tooClose) {
+      selected.push(candidate)
+    }
+
+    if (selected.length >= targetCount) break
+  }
+
+  return selected
+}
+
+function guessColorCategory(color) {
+  const r = color.r
+  const g = color.g
+  const b = color.b
+  const h = color.h
+  const s = color.s
+  const l = color.l
+
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const chroma = max - min
+
+  if (l < 0.16) return '線稿'
+  if (l > 0.88 && chroma < 24) return '高光'
+  if (h > 0.03 && h < 0.13 && s > 0.18 && l > 0.35 && l < 0.85) return '皮膚'
+  if (l < 0.32 && s < 0.35) return '頭髮'
+  if (s < 0.12) return '灰階'
+  return '自動'
+}
+
 function exportPalettePng() {
+  if (swatches.length === 0) {
+    alert('色卡是空的')
+    return
+  }
+
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
 
@@ -298,6 +491,18 @@ function exportPalettePng() {
   link.click()
 }
 
+function quantize(value, step) {
+  return Math.max(0, Math.min(255, Math.round(value / step) * step))
+}
+
+function colorDistance(a, b) {
+  const dr = a.r - b.r
+  const dg = a.g - b.g
+  const db = a.b - b.b
+
+  return Math.sqrt(dr * dr + dg * dg + db * db)
+}
+
 function normalizeHex(value) {
   const raw = String(value || '').trim()
   const withHash = raw.startsWith('#') ? raw : `#${raw}`
@@ -314,6 +519,40 @@ function rgbToHex(r, g, b) {
     .map(value => value.toString(16).padStart(2, '0'))
     .join('')
     .toUpperCase()
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255
+  g /= 255
+  b /= 255
+
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
+    }
+
+    h /= 6
+  }
+
+  return { h, s, l }
 }
 
 function generateMarkdown() {
