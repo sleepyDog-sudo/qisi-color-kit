@@ -5,6 +5,11 @@
 
 A Procreate-friendly image color sampler and automatic palette sheet generator for illustrator workflows.
 
+
+## Preview
+
+![qisi-color-kit preview](./public/preview.png)
+
 ## What this is
 
 qisi-color-kit helps artists upload an image, automatically extract main colors from it, manually sample specific pixels, label those colors, and export a clean palette sheet for Procreate color picking.
