@@ -13,6 +13,9 @@ let pickedCategory = '皮膚'
 let pickedName = '新吸取顏色'
 let autoPaletteCount = 16
 let paletteDensity = 'large'
+let exportTheme = 'light'
+let exportColumns = 4
+let exportTextMode = 'full'
 
 let swatches = []
 
@@ -29,6 +32,9 @@ function loadSavedState() {
     pickedName = state.pickedName || pickedName
     autoPaletteCount = Number(state.autoPaletteCount || autoPaletteCount)
     paletteDensity = state.paletteDensity === 'compact' ? 'compact' : 'large'
+    exportTheme = state.exportTheme === 'dark' ? 'dark' : 'light'
+    exportColumns = Number(state.exportColumns) === 6 ? 6 : 4
+    exportTextMode = ['full', 'hex', 'none'].includes(state.exportTextMode) ? state.exportTextMode : 'full'
 
     if (Array.isArray(state.swatches)) {
       swatches = state.swatches
@@ -47,6 +53,9 @@ function saveState() {
       pickedName,
       autoPaletteCount,
       paletteDensity,
+      exportTheme,
+      exportColumns,
+      exportTextMode,
       swatches
     }
 
@@ -64,6 +73,9 @@ function createSnapshot() {
     pickedName,
     autoPaletteCount,
     paletteDensity,
+    exportTheme,
+    exportColumns,
+    exportTextMode,
     swatches: swatches.map(item => ({
       category: item.category,
       name: item.name,
@@ -79,6 +91,9 @@ function restoreSnapshot(snapshot) {
   pickedName = snapshot.pickedName || '新吸取顏色'
   autoPaletteCount = Number(snapshot.autoPaletteCount || 16)
   paletteDensity = snapshot.paletteDensity === 'compact' ? 'compact' : 'large'
+  exportTheme = snapshot.exportTheme === 'dark' ? 'dark' : 'light'
+  exportColumns = Number(snapshot.exportColumns) === 6 ? 6 : 4
+  exportTextMode = ['full', 'hex', 'none'].includes(snapshot.exportTextMode) ? snapshot.exportTextMode : 'full'
   swatches = Array.isArray(snapshot.swatches)
     ? snapshot.swatches.map(item => ({
         category: item.category || '其他',
@@ -127,6 +142,9 @@ function resetSavedState() {
   pickedName = '新吸取顏色'
   autoPaletteCount = 16
   paletteDensity = 'large'
+  exportTheme = 'light'
+  exportColumns = 4
+  exportTextMode = 'full'
   swatches = []
 
   render()
@@ -170,6 +188,31 @@ function render() {
           <select id="paletteDensity">
             <option value="large" ${paletteDensity === 'large' ? 'selected' : ''}>大色塊</option>
             <option value="compact" ${paletteDensity === 'compact' ? 'selected' : ''}>緊湊</option>
+          </select>
+        </label>
+
+        <label class="selectLabel">
+          匯出底色
+          <select id="exportTheme">
+            <option value="light" ${exportTheme === 'light' ? 'selected' : ''}>白底</option>
+            <option value="dark" ${exportTheme === 'dark' ? 'selected' : ''}>黑底</option>
+          </select>
+        </label>
+
+        <label class="selectLabel">
+          匯出欄數
+          <select id="exportColumns">
+            <option value="4" ${exportColumns === 4 ? 'selected' : ''}>4 欄</option>
+            <option value="6" ${exportColumns === 6 ? 'selected' : ''}>6 欄</option>
+          </select>
+        </label>
+
+        <label class="selectLabel">
+          匯出文字
+          <select id="exportTextMode">
+            <option value="full" ${exportTextMode === 'full' ? 'selected' : ''}>完整</option>
+            <option value="hex" ${exportTextMode === 'hex' ? 'selected' : ''}>只顯示 HEX</option>
+            <option value="none" ${exportTextMode === 'none' ? 'selected' : ''}>不顯示文字</option>
           </select>
         </label>
 
@@ -296,6 +339,21 @@ function bindEvents() {
     paletteDensity = event.target.value === 'compact' ? 'compact' : 'large'
     saveState()
     render()
+  })
+
+  document.querySelector('#exportTheme').addEventListener('change', event => {
+    exportTheme = event.target.value === 'dark' ? 'dark' : 'light'
+    saveState()
+  })
+
+  document.querySelector('#exportColumns').addEventListener('change', event => {
+    exportColumns = Number(event.target.value) === 6 ? 6 : 4
+    saveState()
+  })
+
+  document.querySelector('#exportTextMode').addEventListener('change', event => {
+    exportTextMode = ['full', 'hex', 'none'].includes(event.target.value) ? event.target.value : 'full'
+    saveState()
   })
 
   document.querySelector('#autoExtract').addEventListener('click', () => {
@@ -773,6 +831,9 @@ function exportProjectJson() {
     pickedName,
     autoPaletteCount,
     paletteDensity,
+    exportTheme,
+    exportColumns,
+    exportTextMode,
     swatches: swatches.map(item => ({
       category: item.category || '其他',
       name: item.name || '未命名顏色',
@@ -811,6 +872,9 @@ async function importProjectJson(file) {
     pickedName = project.pickedName || '新吸取顏色'
     autoPaletteCount = Number(project.autoPaletteCount || 16)
     paletteDensity = project.paletteDensity === 'compact' ? 'compact' : 'large'
+    exportTheme = project.exportTheme === 'dark' ? 'dark' : 'light'
+    exportColumns = Number(project.exportColumns) === 6 ? 6 : 4
+    exportTextMode = ['full', 'hex', 'none'].includes(project.exportTextMode) ? project.exportTextMode : 'full'
 
     swatches = project.swatches.map(item => ({
       category: String(item.category || '其他'),
@@ -835,28 +899,36 @@ function exportPalettePng() {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
 
-  const width = 1600
+  const width = 1800
   const padding = 80
-  const gap = 28
-  const columns = 4
+  const gap = exportColumns === 6 ? 20 : 28
+  const columns = exportColumns === 6 ? 6 : 4
   const cardWidth = Math.floor((width - padding * 2 - gap * (columns - 1)) / columns)
-  const cardHeight = 300
-  const colorHeight = 185
+
+  const showFullText = exportTextMode === 'full'
+  const showHexOnly = exportTextMode === 'hex'
+  const showNoText = exportTextMode === 'none'
+  const hasText = !showNoText
+
+  const cardHeight = showNoText ? 220 : showHexOnly ? 260 : 320
+  const colorHeight = showNoText ? cardHeight : 185
   const headerHeight = 170
   const rows = Math.ceil(swatches.length / columns)
   const height = padding + headerHeight + rows * cardHeight + Math.max(0, rows - 1) * gap + padding
 
+  const theme = getExportTheme()
+
   canvas.width = width
   canvas.height = height
 
-  ctx.fillStyle = '#F7F1EA'
+  ctx.fillStyle = theme.background
   ctx.fillRect(0, 0, width, height)
 
-  ctx.fillStyle = '#1F1A1F'
+  ctx.fillStyle = theme.title
   ctx.font = '700 64px system-ui, sans-serif'
   ctx.fillText(characterName || 'Unnamed Character', padding, padding + 68)
 
-  ctx.fillStyle = '#6D6068'
+  ctx.fillStyle = theme.subtle
   ctx.font = '28px system-ui, sans-serif'
   ctx.fillText('qisi-color-kit / Procreate palette sheet', padding, padding + 116)
 
@@ -869,30 +941,63 @@ function exportPalettePng() {
 
     const hex = normalizeHex(item.hex)
 
-    roundRect(ctx, x, y, cardWidth, cardHeight, 24, '#FFFFFF')
-    ctx.strokeStyle = '#D8CBCF'
+    roundRect(ctx, x, y, cardWidth, cardHeight, 24, theme.card)
+    ctx.strokeStyle = theme.stroke
     ctx.lineWidth = 2
     strokeRoundRect(ctx, x, y, cardWidth, cardHeight, 24)
 
     roundRect(ctx, x, y, cardWidth, colorHeight, 24, hex)
 
-    ctx.fillStyle = '#1F1A1F'
-    ctx.font = '700 30px system-ui, sans-serif'
-    ctx.fillText(item.category || '未分類', x + 28, y + colorHeight + 48)
+    if (!hasText) return
 
-    ctx.fillStyle = '#4E454B'
-    ctx.font = '26px system-ui, sans-serif'
-    ctx.fillText(item.name || '未命名顏色', x + 28, y + colorHeight + 88)
+    ctx.fillStyle = theme.title
+    ctx.font = exportColumns === 6 ? '700 22px system-ui, sans-serif' : '700 30px system-ui, sans-serif'
 
-    ctx.fillStyle = '#1F1A1F'
-    ctx.font = '700 28px monospace'
-    ctx.fillText(hex, x + 28, y + colorHeight + 130)
+    if (showFullText) {
+      ctx.fillText(item.category || '未分類', x + 24, y + colorHeight + 44)
+
+      ctx.fillStyle = theme.text
+      ctx.font = exportColumns === 6 ? '20px system-ui, sans-serif' : '26px system-ui, sans-serif'
+      ctx.fillText(item.name || '未命名顏色', x + 24, y + colorHeight + 82)
+
+      ctx.fillStyle = theme.title
+      ctx.font = exportColumns === 6 ? '700 21px monospace' : '700 28px monospace'
+      ctx.fillText(hex, x + 24, y + colorHeight + 122)
+    }
+
+    if (showHexOnly) {
+      ctx.font = exportColumns === 6 ? '700 22px monospace' : '700 30px monospace'
+      ctx.fillText(hex, x + 24, y + colorHeight + 52)
+    }
   })
 
+  const suffix = `${exportTheme}-${columns}col-${exportTextMode}`
   const link = document.createElement('a')
-  link.download = `${safeFileName(characterName)}-palette.png`
+  link.download = `${safeFileName(characterName)}-palette-${suffix}.png`
   link.href = canvas.toDataURL('image/png')
   link.click()
+}
+
+function getExportTheme() {
+  if (exportTheme === 'dark') {
+    return {
+      background: '#141114',
+      card: '#201920',
+      stroke: '#493A45',
+      title: '#F7F1EA',
+      text: '#CFC5CB',
+      subtle: '#A89AA5'
+    }
+  }
+
+  return {
+    background: '#F7F1EA',
+    card: '#FFFFFF',
+    stroke: '#D8CBCF',
+    title: '#1F1A1F',
+    text: '#4E454B',
+    subtle: '#6D6068'
+  }
 }
 
 function quantize(value, step) {

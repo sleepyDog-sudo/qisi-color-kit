@@ -42,6 +42,7 @@ image reference -> auto extract colors -> manually refine labels -> export PNG s
 - Editable HEX color input
 - Large color blocks for direct Procreate color picking
 - PNG palette export
+- Custom PNG export layout: white / dark background, 4 / 6 columns, full / HEX-only / no-text labels
 - Markdown export
 - GitHub Pages live demo
 
