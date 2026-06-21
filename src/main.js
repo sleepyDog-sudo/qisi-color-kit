@@ -17,6 +17,7 @@ let exportTheme = 'light'
 let exportColumns = 4
 let exportTextMode = 'full'
 let activeSampleTarget = null
+let labelAssistStrength = 'normal'
 let labelSamples = {
   skin: null,
   hair: null,
@@ -52,6 +53,7 @@ function loadSavedState() {
     exportTextMode = ['full', 'hex', 'none'].includes(state.exportTextMode) ? state.exportTextMode : 'full'
 
     labelSamples = normalizeLabelSamples(state.labelSamples)
+    labelAssistStrength = normalizeLabelAssistStrength(state.labelAssistStrength)
 
     if (Array.isArray(state.swatches)) {
       swatches = state.swatches
@@ -74,6 +76,7 @@ function saveState() {
       exportColumns,
       exportTextMode,
       labelSamples: normalizeLabelSamples(labelSamples),
+      labelAssistStrength,
       swatches
     }
 
@@ -94,6 +97,8 @@ function createSnapshot() {
     exportTheme,
     exportColumns,
     exportTextMode,
+    labelAssistStrength,
+    labelAssistStrength,
     swatches: swatches.map(item => ({
       category: item.category,
       name: item.name,
@@ -112,6 +117,7 @@ function restoreSnapshot(snapshot) {
   exportTheme = snapshot.exportTheme === 'dark' ? 'dark' : 'light'
   exportColumns = Number(snapshot.exportColumns) === 6 ? 6 : 4
   exportTextMode = ['full', 'hex', 'none'].includes(snapshot.exportTextMode) ? snapshot.exportTextMode : 'full'
+  labelAssistStrength = normalizeLabelAssistStrength(snapshot.labelAssistStrength)
   swatches = Array.isArray(snapshot.swatches)
     ? snapshot.swatches.map(item => ({
         category: item.category || '其他',
@@ -164,6 +170,7 @@ function resetSavedState() {
   exportColumns = 4
   exportTextMode = 'full'
   swatches = []
+  labelAssistStrength = 'normal'
 
   render()
 }
@@ -438,6 +445,11 @@ function bindEvents() {
 
   document.querySelector('#applyLabelAssist').addEventListener('click', () => {
     applyLabelAssist()
+  })
+
+  document.querySelector('#labelAssistStrength').addEventListener('change', event => {
+    labelAssistStrength = normalizeLabelAssistStrength(event.target.value)
+    saveState()
   })
 
   document.querySelector('#clearLabelSamples').addEventListener('click', () => {
@@ -816,6 +828,15 @@ function renderLabelAssist() {
         ${sampleButtons}
       </div>
 
+      <label class="labelAssistStrength">
+        判定強度
+        <select id="labelAssistStrength">
+          <option value="strict" ${labelAssistStrength === 'strict' ? 'selected' : ''}>嚴格</option>
+          <option value="normal" ${labelAssistStrength === 'normal' ? 'selected' : ''}>普通</option>
+          <option value="loose" ${labelAssistStrength === 'loose' ? 'selected' : ''}>寬鬆</option>
+        </select>
+      </label>
+
       <div class="labelAssistActions">
         <button id="applyLabelAssist" type="button">套用標籤輔助</button>
         <button id="clearLabelSamples" type="button">清除樣本</button>
@@ -869,6 +890,37 @@ function normalizeLabelSamples(value) {
   return normalized
 }
 
+function normalizeLabelAssistStrength(value) {
+  if (value === 'strict') return 'strict'
+  if (value === 'loose') return 'loose'
+  return 'normal'
+}
+
+function getLabelAssistThreshold(sampleKey) {
+  const table = {
+    strict: {
+      skin: 52,
+      hair: 48,
+      clothing: 56,
+      lineart: 42
+    },
+    normal: {
+      skin: 96,
+      hair: 84,
+      clothing: 96,
+      lineart: 72
+    },
+    loose: {
+      skin: 132,
+      hair: 118,
+      clothing: 132,
+      lineart: 96
+    }
+  }
+
+  return table[labelAssistStrength]?.[sampleKey] ?? table.normal[sampleKey] ?? 96
+}
+
 function applyLabelAssist() {
   const samples = Object.values(labelSamples).filter(Boolean)
 
@@ -900,7 +952,7 @@ function applyLabelAssist() {
 
     if (!bestSample) return item
 
-    const threshold = bestSample.key === 'lineart' ? 72 : 96
+    const threshold = getLabelAssistThreshold(bestSample.key)
 
     if (bestDistance > threshold) {
       return item
@@ -1047,6 +1099,7 @@ async function importProjectJson(file) {
     pickedCategory = project.pickedCategory || '皮膚'
     pickedName = project.pickedName || '新吸取顏色'
     autoPaletteCount = Number(project.autoPaletteCount || 16)
+    labelAssistStrength = normalizeLabelAssistStrength(project.labelAssistStrength)
     paletteDensity = project.paletteDensity === 'compact' ? 'compact' : 'large'
     exportTheme = project.exportTheme === 'dark' ? 'dark' : 'light'
     exportColumns = Number(project.exportColumns) === 6 ? 6 : 4

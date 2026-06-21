@@ -24,6 +24,7 @@ image reference -> auto extract colors -> manually refine labels -> export PNG s
 - Automatically extract 8 / 12 / 16 / 24 main colors
 - Click the image to sample exact pixel colors
 - Semi-automatic Label Assist for skin / hair / clothing / lineart categories
+- Adjustable Label Assist strength: strict / normal / loose
 - Picked color preview
 - Labelled color swatches
 - Drag-and-drop swatch sorting

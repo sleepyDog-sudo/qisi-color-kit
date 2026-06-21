@@ -302,3 +302,13 @@ pre {
   background: #100d10;
   flex: 0 0 auto;
 }
+
+
+.labelAssistStrength {
+  display: grid;
+  gap: 8px;
+}
+
+.labelAssistStrength select {
+  width: 100%;
+}
