@@ -1,6 +1,10 @@
 import './styles.css'
 
 const STORAGE_KEY = 'qisi-color-kit-state-v1'
+const HISTORY_LIMIT = 40
+
+let undoStack = []
+let redoStack = []
 
 let characterName = 'Unnamed Character'
 let uploadedImage = null
@@ -49,7 +53,66 @@ function saveState() {
   }
 }
 
+function createSnapshot() {
+  return {
+    characterName,
+    pickedColor,
+    pickedCategory,
+    pickedName,
+    autoPaletteCount,
+    swatches: swatches.map(item => ({
+      category: item.category,
+      name: item.name,
+      hex: item.hex
+    }))
+  }
+}
+
+function restoreSnapshot(snapshot) {
+  characterName = snapshot.characterName || 'Unnamed Character'
+  pickedColor = normalizeHex(snapshot.pickedColor || '#FFFFFF')
+  pickedCategory = snapshot.pickedCategory || '皮膚'
+  pickedName = snapshot.pickedName || '新吸取顏色'
+  autoPaletteCount = Number(snapshot.autoPaletteCount || 16)
+  swatches = Array.isArray(snapshot.swatches)
+    ? snapshot.swatches.map(item => ({
+        category: item.category || '其他',
+        name: item.name || '未命名顏色',
+        hex: normalizeHex(item.hex || '#FFFFFF')
+      }))
+    : []
+
+  render()
+}
+
+function pushHistory() {
+  undoStack.push(createSnapshot())
+
+  if (undoStack.length > HISTORY_LIMIT) {
+    undoStack.shift()
+  }
+
+  redoStack = []
+}
+
+function undoLastAction() {
+  if (undoStack.length === 0) return
+
+  redoStack.push(createSnapshot())
+  const snapshot = undoStack.pop()
+  restoreSnapshot(snapshot)
+}
+
+function redoLastAction() {
+  if (redoStack.length === 0) return
+
+  undoStack.push(createSnapshot())
+  const snapshot = redoStack.pop()
+  restoreSnapshot(snapshot)
+}
+
 function resetSavedState() {
+  pushHistory()
   localStorage.removeItem(STORAGE_KEY)
 
   characterName = 'Unnamed Character'
@@ -97,6 +160,8 @@ function render() {
         </label>
 
         <button id="autoExtract">自動抽色</button>
+        <button id="undoAction" ${undoStack.length === 0 ? 'disabled' : ''}>復原</button>
+        <button id="redoAction" ${redoStack.length === 0 ? 'disabled' : ''}>重做</button>
         <button id="addManualSwatch">手動新增顏色</button>
         <button id="clearPalette">清空色卡</button>
         <button id="exportPng">匯出 PNG 色卡</button>
@@ -189,6 +254,7 @@ function bindEvents() {
 
       img.onload = () => {
         uploadedImage = img
+        pushHistory()
         swatches = extractPaletteFromImage(uploadedImage, autoPaletteCount).map((item, index) => ({
           category: guessColorCategory(item),
           name: `自動抽色 ${String(index + 1).padStart(2, '0')}`,
@@ -213,6 +279,14 @@ function bindEvents() {
     autoExtractPalette()
   })
 
+  document.querySelector('#undoAction').addEventListener('click', () => {
+    undoLastAction()
+  })
+
+  document.querySelector('#redoAction').addEventListener('click', () => {
+    redoLastAction()
+  })
+
   document.querySelector('#pickedCategory').addEventListener('input', event => {
     pickedCategory = event.target.value
     saveState()
@@ -231,6 +305,7 @@ function bindEvents() {
   })
 
   document.querySelector('#addPickedColor').addEventListener('click', () => {
+    pushHistory()
     swatches.push({
       category: pickedCategory || '其他',
       name: pickedName || '吸取顏色',
@@ -243,6 +318,7 @@ function bindEvents() {
     input.addEventListener('change', event => {
       const index = Number(event.target.dataset.index)
       const field = event.target.dataset.field
+      pushHistory()
       swatches[index][field] = event.target.value.trim()
       render()
     })
@@ -265,6 +341,7 @@ function bindEvents() {
   document.querySelectorAll('[data-remove]').forEach(button => {
     button.addEventListener('click', event => {
       const index = Number(event.target.dataset.remove)
+      pushHistory()
       swatches.splice(index, 1)
       render()
     })
@@ -296,6 +373,8 @@ function bindEvents() {
         return
       }
 
+      pushHistory()
+
       const [moved] = swatches.splice(fromIndex, 1)
       swatches.splice(toIndex, 0, moved)
 
@@ -304,6 +383,7 @@ function bindEvents() {
   })
 
   document.querySelector('#addManualSwatch').addEventListener('click', () => {
+    pushHistory()
     swatches.push({
       category: '其他',
       name: '手動新增顏色',
@@ -313,6 +393,9 @@ function bindEvents() {
   })
 
   document.querySelector('#clearPalette').addEventListener('click', () => {
+    if (swatches.length === 0) return
+
+    pushHistory()
     swatches = []
     render()
   })
@@ -407,6 +490,8 @@ function autoExtractPalette() {
     alert('沒有抽到有效顏色')
     return
   }
+
+  pushHistory()
 
   swatches = extracted.map((item, index) => ({
     category: guessColorCategory(item),
@@ -601,6 +686,8 @@ async function importProjectJson(file) {
     if (!project || !Array.isArray(project.swatches)) {
       throw new Error('Invalid qisi-color-kit project file')
     }
+
+    pushHistory()
 
     characterName = project.characterName || 'Unnamed Character'
     pickedColor = normalizeHex(project.pickedColor || '#FFFFFF')

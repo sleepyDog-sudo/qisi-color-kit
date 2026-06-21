@@ -95,6 +95,15 @@ button:hover,
   background: #3a3038;
 }
 
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: #2b222a;
+}
+
 .fileButton input {
   display: none;
 }
