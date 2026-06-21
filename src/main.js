@@ -12,6 +12,7 @@ let pickedColor = '#FFFFFF'
 let pickedCategory = '皮膚'
 let pickedName = '新吸取顏色'
 let autoPaletteCount = 16
+let paletteDensity = 'large'
 
 let swatches = []
 
@@ -27,6 +28,7 @@ function loadSavedState() {
     pickedCategory = state.pickedCategory || pickedCategory
     pickedName = state.pickedName || pickedName
     autoPaletteCount = Number(state.autoPaletteCount || autoPaletteCount)
+    paletteDensity = state.paletteDensity === 'compact' ? 'compact' : 'large'
 
     if (Array.isArray(state.swatches)) {
       swatches = state.swatches
@@ -44,6 +46,7 @@ function saveState() {
       pickedCategory,
       pickedName,
       autoPaletteCount,
+      paletteDensity,
       swatches
     }
 
@@ -60,6 +63,7 @@ function createSnapshot() {
     pickedCategory,
     pickedName,
     autoPaletteCount,
+    paletteDensity,
     swatches: swatches.map(item => ({
       category: item.category,
       name: item.name,
@@ -74,6 +78,7 @@ function restoreSnapshot(snapshot) {
   pickedCategory = snapshot.pickedCategory || '皮膚'
   pickedName = snapshot.pickedName || '新吸取顏色'
   autoPaletteCount = Number(snapshot.autoPaletteCount || 16)
+  paletteDensity = snapshot.paletteDensity === 'compact' ? 'compact' : 'large'
   swatches = Array.isArray(snapshot.swatches)
     ? snapshot.swatches.map(item => ({
         category: item.category || '其他',
@@ -121,6 +126,7 @@ function resetSavedState() {
   pickedCategory = '皮膚'
   pickedName = '新吸取顏色'
   autoPaletteCount = 16
+  paletteDensity = 'large'
   swatches = []
 
   render()
@@ -156,6 +162,14 @@ function render() {
             ${[8, 12, 16, 24].map(count => `
               <option value="${count}" ${count === autoPaletteCount ? 'selected' : ''}>${count} 色</option>
             `).join('')}
+          </select>
+        </label>
+
+        <label class="selectLabel">
+          色卡密度
+          <select id="paletteDensity">
+            <option value="large" ${paletteDensity === 'large' ? 'selected' : ''}>大色塊</option>
+            <option value="compact" ${paletteDensity === 'compact' ? 'selected' : ''}>緊湊</option>
           </select>
         </label>
 
@@ -210,7 +224,7 @@ function render() {
       </div>
     </section>
 
-    <section class="palette">
+    <section class="palette ${paletteDensity}">
       ${swatches.map((item, index) => `
         <article class="swatch" draggable="true" data-drag-index="${index}">
           <div class="color" style="background:${normalizeHex(item.hex)}"></div>
@@ -276,6 +290,12 @@ function bindEvents() {
   document.querySelector('#autoPaletteCount').addEventListener('change', event => {
     autoPaletteCount = Number(event.target.value)
     saveState()
+  })
+
+  document.querySelector('#paletteDensity').addEventListener('change', event => {
+    paletteDensity = event.target.value === 'compact' ? 'compact' : 'large'
+    saveState()
+    render()
   })
 
   document.querySelector('#autoExtract').addEventListener('click', () => {
@@ -752,6 +772,7 @@ function exportProjectJson() {
     pickedCategory,
     pickedName,
     autoPaletteCount,
+    paletteDensity,
     swatches: swatches.map(item => ({
       category: item.category || '其他',
       name: item.name || '未命名顏色',
@@ -789,6 +810,7 @@ async function importProjectJson(file) {
     pickedCategory = project.pickedCategory || '皮膚'
     pickedName = project.pickedName || '新吸取顏色'
     autoPaletteCount = Number(project.autoPaletteCount || 16)
+    paletteDensity = project.paletteDensity === 'compact' ? 'compact' : 'large'
 
     swatches = project.swatches.map(item => ({
       category: String(item.category || '其他'),

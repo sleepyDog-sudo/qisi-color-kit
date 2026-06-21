@@ -163,6 +163,35 @@ button:disabled:hover {
   margin-bottom: 24px;
 }
 
+.palette.compact {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.palette.compact .color {
+  height: 88px;
+}
+
+.palette.compact .meta {
+  gap: 6px;
+  padding: 10px;
+}
+
+.palette.compact input {
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.palette.compact .swatchActions {
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+
+.palette.compact .swatchActions button {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .swatch {
   border: 1px solid #342b33;
   background: #1c171c;
