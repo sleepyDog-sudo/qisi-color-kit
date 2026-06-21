@@ -1,0 +1,16 @@
+{
+  "name": "qisi-color-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Procreate-friendly palette sheet generator for illustrator workflows.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "vite": "latest"
+  },
+  "devDependencies": {}
+}
