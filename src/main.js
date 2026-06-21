@@ -1,6 +1,10 @@
 import './styles.css'
 
 let characterName = 'Unnamed Character'
+let uploadedImage = null
+let pickedColor = '#FFFFFF'
+let pickedCategory = '皮膚'
+let pickedName = '新吸取顏色'
 
 let swatches = [
   { category: '皮膚', name: '皮膚底色', hex: '#F3C7B3' },
@@ -21,7 +25,7 @@ function render() {
     <section class="hero">
       <p class="eyebrow">ratshawty atelier</p>
       <h1>qisi-color-kit</h1>
-      <p class="sub">Procreate-friendly palette sheet generator for character illustration.</p>
+      <p class="sub">Drop an image, pick colors, build a Procreate-friendly palette sheet.</p>
     </section>
 
     <section class="panel">
@@ -31,9 +35,44 @@ function render() {
       </label>
 
       <div class="actions">
-        <button id="addSwatch">新增顏色</button>
+        <label class="fileButton">
+          上傳圖片吸色
+          <input id="imageInput" type="file" accept="image/*" />
+        </label>
+
+        <button id="addManualSwatch">手動新增顏色</button>
         <button id="exportPng">匯出 PNG 色卡</button>
         <button id="copyMarkdown">複製 Markdown</button>
+      </div>
+    </section>
+
+    <section class="sampler">
+      <div class="samplerCanvasWrap">
+        <canvas id="imageCanvas"></canvas>
+        <p class="samplerHint">${uploadedImage ? '點圖片任意位置吸色' : '先上傳一張圖片，然後點圖片吸色'}</p>
+      </div>
+
+      <div class="pickedPanel">
+        <h2>Picked Color</h2>
+
+        <div class="pickedColor" style="background:${pickedColor}"></div>
+
+        <label>
+          分類
+          <input id="pickedCategory" value="${escapeHtml(pickedCategory)}" />
+        </label>
+
+        <label>
+          用途
+          <input id="pickedName" value="${escapeHtml(pickedName)}" />
+        </label>
+
+        <label>
+          HEX
+          <input id="pickedHex" value="${escapeHtml(pickedColor)}" />
+        </label>
+
+        <button id="addPickedColor">加入色卡</button>
       </div>
     </section>
 
@@ -60,12 +99,55 @@ function render() {
   `
 
   bindEvents()
+  drawUploadedImage()
 }
 
 function bindEvents() {
   document.querySelector('#characterName').addEventListener('input', event => {
     characterName = event.target.value
     document.querySelector('pre').textContent = generateMarkdown()
+  })
+
+  document.querySelector('#imageInput').addEventListener('change', event => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      const img = new Image()
+
+      img.onload = () => {
+        uploadedImage = img
+        render()
+      }
+
+      img.src = reader.result
+    }
+
+    reader.readAsDataURL(file)
+  })
+
+  document.querySelector('#pickedCategory').addEventListener('input', event => {
+    pickedCategory = event.target.value
+  })
+
+  document.querySelector('#pickedName').addEventListener('input', event => {
+    pickedName = event.target.value
+  })
+
+  document.querySelector('#pickedHex').addEventListener('input', event => {
+    pickedColor = normalizeHex(event.target.value)
+    document.querySelector('.pickedColor').style.background = pickedColor
+  })
+
+  document.querySelector('#addPickedColor').addEventListener('click', () => {
+    swatches.push({
+      category: pickedCategory || '其他',
+      name: pickedName || '吸取顏色',
+      hex: normalizeHex(pickedColor)
+    })
+    render()
   })
 
   document.querySelectorAll('input[data-index]').forEach(input => {
@@ -85,10 +167,10 @@ function bindEvents() {
     })
   })
 
-  document.querySelector('#addSwatch').addEventListener('click', () => {
+  document.querySelector('#addManualSwatch').addEventListener('click', () => {
     swatches.push({
       category: '其他',
-      name: '新顏色',
+      name: '手動新增顏色',
       hex: '#FFFFFF'
     })
     render()
@@ -101,6 +183,54 @@ function bindEvents() {
 
   document.querySelector('#exportPng').addEventListener('click', () => {
     exportPalettePng()
+  })
+}
+
+function drawUploadedImage() {
+  const canvas = document.querySelector('#imageCanvas')
+  const ctx = canvas.getContext('2d')
+
+  const maxWidth = 760
+  const maxHeight = 560
+
+  if (!uploadedImage) {
+    canvas.width = maxWidth
+    canvas.height = 320
+    ctx.fillStyle = '#100D10'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    ctx.fillStyle = '#6D6068'
+    ctx.font = '24px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('Upload an image to sample colors', canvas.width / 2, canvas.height / 2)
+
+    return
+  }
+
+  const ratio = Math.min(
+    maxWidth / uploadedImage.width,
+    maxHeight / uploadedImage.height,
+    1
+  )
+
+  canvas.width = Math.round(uploadedImage.width * ratio)
+  canvas.height = Math.round(uploadedImage.height * ratio)
+
+  ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height)
+
+  canvas.addEventListener('click', event => {
+    const rect = canvas.getBoundingClientRect()
+    const x = Math.floor((event.clientX - rect.left) * (canvas.width / rect.width))
+    const y = Math.floor((event.clientY - rect.top) * (canvas.height / rect.height))
+
+    const pixel = ctx.getImageData(x, y, 1, 1).data
+    pickedColor = rgbToHex(pixel[0], pixel[1], pixel[2])
+
+    const pickedHexInput = document.querySelector('#pickedHex')
+    const pickedColorPreview = document.querySelector('.pickedColor')
+
+    pickedHexInput.value = pickedColor
+    pickedColorPreview.style.background = pickedColor
   })
 }
 
@@ -177,6 +307,13 @@ function normalizeHex(value) {
   }
 
   return '#FFFFFF'
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b]
+    .map(value => value.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()
 }
 
 function generateMarkdown() {
