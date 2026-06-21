@@ -101,6 +101,13 @@ function render() {
         <button id="clearPalette">清空色卡</button>
         <button id="exportPng">匯出 PNG 色卡</button>
         <button id="copyMarkdown">複製 Markdown</button>
+        <button id="exportProject">匯出專案 JSON</button>
+
+        <label class="fileButton">
+          匯入專案 JSON
+          <input id="projectInput" type="file" accept="application/json,.json" />
+        </label>
+
         <button id="resetState">重置儲存</button>
       </div>
     </section>
@@ -313,6 +320,18 @@ function bindEvents() {
   document.querySelector('#copyMarkdown').addEventListener('click', async () => {
     await navigator.clipboard.writeText(generateMarkdown())
     alert('Markdown 已複製')
+  })
+
+  document.querySelector('#exportProject').addEventListener('click', () => {
+    exportProjectJson()
+  })
+
+  document.querySelector('#projectInput').addEventListener('change', async event => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    await importProjectJson(file)
+    event.target.value = ''
   })
 
   document.querySelector('#resetState').addEventListener('click', () => {
@@ -541,6 +560,66 @@ function guessColorCategory(color) {
   if (l < 0.32 && s < 0.35) return '頭髮'
   if (s < 0.12) return '灰階'
   return '自動'
+}
+
+function exportProjectJson() {
+  const project = {
+    app: 'qisi-color-kit',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    characterName,
+    pickedColor: normalizeHex(pickedColor),
+    pickedCategory,
+    pickedName,
+    autoPaletteCount,
+    swatches: swatches.map(item => ({
+      category: item.category || '其他',
+      name: item.name || '未命名顏色',
+      hex: normalizeHex(item.hex)
+    }))
+  }
+
+  const blob = new Blob([JSON.stringify(project, null, 2)], {
+    type: 'application/json'
+  })
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = `${safeFileName(characterName)}-qisi-color-kit.json`
+  link.click()
+
+  URL.revokeObjectURL(url)
+}
+
+async function importProjectJson(file) {
+  try {
+    const text = await file.text()
+    const project = JSON.parse(text)
+
+    if (!project || !Array.isArray(project.swatches)) {
+      throw new Error('Invalid qisi-color-kit project file')
+    }
+
+    characterName = project.characterName || 'Unnamed Character'
+    pickedColor = normalizeHex(project.pickedColor || '#FFFFFF')
+    pickedCategory = project.pickedCategory || '皮膚'
+    pickedName = project.pickedName || '新吸取顏色'
+    autoPaletteCount = Number(project.autoPaletteCount || 16)
+
+    swatches = project.swatches.map(item => ({
+      category: String(item.category || '其他'),
+      name: String(item.name || '未命名顏色'),
+      hex: normalizeHex(item.hex || '#FFFFFF')
+    }))
+
+    saveState()
+    render()
+  } catch (error) {
+    console.error(error)
+    alert('匯入失敗：這不是有效的 qisi-color-kit JSON 專案檔')
+  }
 }
 
 function exportPalettePng() {
