@@ -8,7 +8,7 @@ A Procreate-friendly image color sampler and automatic palette sheet generator f
 
 ## Preview
 
-![qisi-color-kit preview](./public/preview.png)
+<img src="./public/preview.png" alt="qisi-color-kit preview" width="360">
 
 ## What this is
 
