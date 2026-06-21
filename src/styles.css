@@ -159,6 +159,18 @@ button:hover,
   background: #1c171c;
   border-radius: 18px;
   overflow: hidden;
+  cursor: grab;
+  transition: opacity 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.swatch:active {
+  cursor: grabbing;
+}
+
+.swatch.dragging {
+  opacity: 0.48;
+  transform: scale(0.98);
+  border-color: #8a7484;
 }
 
 .color {
@@ -171,8 +183,23 @@ button:hover,
   padding: 14px;
 }
 
+.swatchActions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.swatchActions button {
+  flex: 1;
+  margin: 0;
+}
+
+.copyHex {
+  border-color: #6e5d69;
+}
+
 .remove {
-  margin: 0 14px 14px;
+  margin: 0;
 }
 
 pre {

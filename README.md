@@ -25,6 +25,10 @@ image reference -> auto extract colors -> manually refine labels -> export PNG s
 - Click the image to sample exact pixel colors
 - Picked color preview
 - Labelled color swatches
+- Drag-and-drop swatch sorting
+- One-click HEX copy
+- Drag-and-drop swatch sorting
+- One-click HEX copy
 - Editable HEX color input
 - Large color blocks for direct Procreate color picking
 - PNG palette export

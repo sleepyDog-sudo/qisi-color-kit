@@ -80,7 +80,7 @@ function render() {
 
     <section class="palette">
       ${swatches.map((item, index) => `
-        <article class="swatch">
+        <article class="swatch" draggable="true" data-drag-index="${index}">
           <div class="color" style="background:${normalizeHex(item.hex)}"></div>
 
           <div class="meta">
@@ -89,7 +89,10 @@ function render() {
             <input data-index="${index}" data-field="hex" value="${escapeHtml(item.hex)}" />
           </div>
 
-          <button class="remove" data-remove="${index}">刪除</button>
+          <div class="swatchActions">
+            <button class="copyHex" data-copy-hex="${normalizeHex(item.hex)}">複製 HEX</button>
+            <button class="remove" data-remove="${index}">刪除</button>
+          </div>
         </article>
       `).join('')}
     </section>
@@ -175,10 +178,57 @@ function bindEvents() {
     })
   })
 
+  document.querySelectorAll('[data-copy-hex]').forEach(button => {
+    button.addEventListener('click', async event => {
+      const hex = event.currentTarget.dataset.copyHex
+      await navigator.clipboard.writeText(hex)
+
+      const oldText = event.currentTarget.textContent
+      event.currentTarget.textContent = '已複製'
+
+      window.setTimeout(() => {
+        event.currentTarget.textContent = oldText
+      }, 700)
+    })
+  })
+
   document.querySelectorAll('[data-remove]').forEach(button => {
     button.addEventListener('click', event => {
       const index = Number(event.target.dataset.remove)
       swatches.splice(index, 1)
+      render()
+    })
+  })
+
+  document.querySelectorAll('[data-drag-index]').forEach(card => {
+    card.addEventListener('dragstart', event => {
+      event.currentTarget.classList.add('dragging')
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', event.currentTarget.dataset.dragIndex)
+    })
+
+    card.addEventListener('dragend', event => {
+      event.currentTarget.classList.remove('dragging')
+    })
+
+    card.addEventListener('dragover', event => {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+    })
+
+    card.addEventListener('drop', event => {
+      event.preventDefault()
+
+      const fromIndex = Number(event.dataTransfer.getData('text/plain'))
+      const toIndex = Number(event.currentTarget.dataset.dragIndex)
+
+      if (Number.isNaN(fromIndex) || Number.isNaN(toIndex) || fromIndex === toIndex) {
+        return
+      }
+
+      const [moved] = swatches.splice(fromIndex, 1)
+      swatches.splice(toIndex, 0, moved)
+
       render()
     })
   })
