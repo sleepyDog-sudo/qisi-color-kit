@@ -25,26 +25,18 @@ image reference -> auto extract colors -> manually refine labels -> export PNG s
 - Click the image to sample exact pixel colors
 - Semi-automatic Label Assist for skin / hair / clothing / lineart categories
 - Adjustable Label Assist strength: strict / normal / loose
-- Picked color preview
+- Automatic swatch naming by category and lightness
 - Labelled color swatches
+- Editable category / name / HEX fields
 - Drag-and-drop swatch sorting
+- Automatic swatch sorting by category, lightness, and hue
 - One-click HEX copy
+- Undo / redo palette editing
 - LocalStorage autosave
 - Project JSON import / export
-- Undo / redo palette editing
-- Automatic swatch sorting by category, lightness, and hue
 - Compact / large palette density modes
-- Drag-and-drop swatch sorting
-- One-click HEX copy
-- LocalStorage autosave
-- Project JSON import / export
-- Undo / redo palette editing
-- Automatic swatch sorting by category, lightness, and hue
-- Compact / large palette density modes
-- Editable HEX color input
-- Large color blocks for direct Procreate color picking
-- PNG palette export
 - Custom PNG export layout: white / dark background, 4 / 6 columns, full / HEX-only / no-text labels
+- PNG palette export for Procreate color picking
 - Markdown export
 - GitHub Pages live demo
 
